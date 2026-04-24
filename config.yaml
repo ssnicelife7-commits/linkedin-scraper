@@ -1,0 +1,24 @@
+# ─────────────────────────────────────────────
+#  LinkedIn Scraper — Configuration
+#  Edit these values to tune scraping behavior.
+# ─────────────────────────────────────────────
+
+# Max posts to process in a single run.
+# Keep at 30 or below to stay safe.
+# Run the script multiple times for larger batches.
+max_posts_per_session: 30
+
+# Seconds to wait between posts.
+# DO NOT lower delay_min_sec below 10.
+delay_min_sec: 15
+delay_max_sec: 45
+
+# How many times to scroll inside the "reactions" popup.
+# Each scroll loads ~10 more people. 25 = up to ~250 likers.
+max_reaction_scrolls: 25
+
+# How many times to click "Load more comments" per post.
+max_load_more_clicks: 10
+
+# Browser fingerprint — leave as-is unless you change OS
+user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
