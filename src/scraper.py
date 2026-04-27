@@ -28,7 +28,15 @@ def load_config():
         return yaml.safe_load(f)
 
 
-VALID_SAME_SITE = {"Strict", "Lax", "None"}
+# Cookie-Editor exports sameSite as "no_restriction", "lax", "strict", "unspecified", or missing.
+# Playwright only accepts "Strict", "Lax", or "None".
+_SAME_SITE_MAP = {
+    "strict":         "Strict",
+    "lax":            "Lax",
+    "none":           "None",
+    "no_restriction": "None",
+    "unspecified":    "Lax",
+}
 
 def load_cookies():
     if not COOKIES_PATH.exists():
@@ -38,8 +46,8 @@ def load_cookies():
     with open(COOKIES_PATH, encoding="utf-8") as f:
         cookies = json.load(f)
     for cookie in cookies:
-        if cookie.get("sameSite") not in VALID_SAME_SITE:
-            cookie["sameSite"] = "None"
+        raw = str(cookie.get("sameSite") or "").lower()
+        cookie["sameSite"] = _SAME_SITE_MAP.get(raw, "Lax")
     return cookies
 
 
