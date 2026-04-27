@@ -118,12 +118,11 @@ async def scroll_element(page, selector, amount=400):
 # LinkedIn selector lists — ordered from most to least reliable.
 # LinkedIn redesigns its UI periodically; add new selectors at the top if one breaks.
 REACTION_BTN_SELECTORS = [
-    "button:has(span.social-detail-social-counts_reactions-count)",
-    "span.social-detail-social-counts_reactions-count",
-    "button.social-details-social-counts__reactions-count",
-    "button[aria-label*='reaction']",
+    "button:has(span.social-details-social-counts__reactions-count)",
     "span.social-details-social-counts__reactions-count",
+    "button[aria-label*='reaction']",
     ".social-details-social-counts__reactions button",
+    "button.social-details-social-counts__reactions-count",
     "button.feed-shared-social-actions__reactions-count",
 ]
 
