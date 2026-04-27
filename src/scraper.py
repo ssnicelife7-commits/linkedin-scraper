@@ -350,7 +350,8 @@ async def scrape_post(page, post_info, config):
     print(f"    Competitor: {competitor}")
 
     try:
-        await page.goto(url, wait_until="domcontentloaded", timeout=30000)
+        clean_url = url.split("?")[0]
+        await page.goto(clean_url, wait_until="domcontentloaded", timeout=60000)
         await human_delay(3, 6)
         await page.mouse.wheel(0, random.randint(200, 500))
         await human_delay(2, 4)
