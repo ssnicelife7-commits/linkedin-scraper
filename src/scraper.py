@@ -28,13 +28,19 @@ def load_config():
         return yaml.safe_load(f)
 
 
+VALID_SAME_SITE = {"Strict", "Lax", "None"}
+
 def load_cookies():
     if not COOKIES_PATH.exists():
         print(f"\n[ERROR] Cookies file not found at:\n  {COOKIES_PATH}")
         print("\nPlease follow the steps in cookies/README.txt")
         sys.exit(1)
     with open(COOKIES_PATH, encoding="utf-8") as f:
-        return json.load(f)
+        cookies = json.load(f)
+    for cookie in cookies:
+        if cookie.get("sameSite") not in VALID_SAME_SITE:
+            cookie["sameSite"] = "None"
+    return cookies
 
 
 def load_post_urls():
