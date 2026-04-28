@@ -103,17 +103,19 @@ async def scroll_element(page, selector, amount=400):
 # ── Session setup ─────────────────────────────────────────────────────────────────
 
 async def import_cookies_if_present(context):
-    """Import cookies from linkedin_cookies.json into the browser profile if the file exists."""
+    """Import cookies from linkedin_cookies.json, clearing stale LinkedIn cookies first."""
     if not COOKIES_PATH.exists():
         print(f"[i] No cookies file found at cookies\\linkedin_cookies.json")
         print(f"    Using existing browser profile session.")
         return
-    print(f"[*] Found cookies file — importing into browser profile...")
+    print(f"[*] Found cookies file — clearing stale session and importing...")
     with open(COOKIES_PATH, encoding="utf-8") as f:
         cookies = json.load(f)
     for c in cookies:
         if c.get("sameSite") not in {"Strict", "Lax", "None"}:
             c["sameSite"] = "None"
+    # Wipe all existing cookies so stale LinkedIn session can't override the fresh ones
+    await context.clear_cookies()
     await context.add_cookies(cookies)
     imported_path = COOKIES_PATH.with_suffix(".json.imported")
     COOKIES_PATH.rename(imported_path)
@@ -154,7 +156,7 @@ async def scrape_reactions(page, config):
     for sel in REACTION_BTN_SELECTORS:
         try:
             btn = await page.wait_for_selector(sel, timeout=4000)
-            if btn and await btn.is_visible():  
+            if btn and await btn.is_visible():
                 reactions_btn = btn
                 break
         except PlaywrightTimeout:
