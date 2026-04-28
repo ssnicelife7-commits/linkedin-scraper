@@ -102,8 +102,8 @@ async def scroll_element(page, selector, amount=400):
 
 # ── Session setup ─────────────────────────────────────────────────────────────────
 
-async def migrate_cookies_if_needed(context):
-    """One-time: inject Opera-exported cookies into the new persistent profile."""
+async def import_cookies_if_present(context):
+    """Import cookies from linkedin_cookies.json into the browser profile if the file exists."""
     if not COOKIES_PATH.exists():
         return
     with open(COOKIES_PATH, encoding="utf-8") as f:
@@ -114,14 +114,9 @@ async def migrate_cookies_if_needed(context):
     await context.add_cookies(cookies)
     imported_path = COOKIES_PATH.with_suffix(".json.imported")
     COOKIES_PATH.rename(imported_path)
-    print(f"[*] Cookies migrated into persistent profile.")
-    print(f"    Cookie file renamed to: {imported_path.name}")
-    print(f"    You will NOT need to export cookies again.\n")
-
-
-def _profile_exists():
-    """Check whether a usable persistent profile has been created."""
-    return (PROFILE_DIR / "Default" / "Cookies").exists()
+    print(f"[*] Cookies imported into browser profile.")
+    print(f"    File renamed to: {imported_path.name}")
+    print(f"    Drop a new linkedin_cookies.json here any time to refresh the session.\n")
 
 
 # ── Reactions (likers) ────────────────────────────────────────────────────────
@@ -401,7 +396,6 @@ async def main():
         print("Nothing to scrape — all URLs in post_urls.csv are marked done.")
         return
 
-    is_first_run = not _profile_exists()
     proxy_url = config.get("proxy", "").strip()
     launch_kwargs = {"proxy": {"server": proxy_url}} if proxy_url else {}
 
@@ -420,8 +414,7 @@ async def main():
             **launch_kwargs,
         )
 
-        if is_first_run:
-            await migrate_cookies_if_needed(context)
+        await import_cookies_if_present(context)
 
         page = await context.new_page()
         await Stealth().apply_stealth_async(page)
@@ -432,8 +425,8 @@ async def main():
 
         if "login" in page.url or "checkpoint" in page.url:
             print("\n[ERROR] Session not recognised.")
-            print("Follow the steps in cookies/README.txt to export your cookies from Opera,")
-            print("then re-run this script.\n")
+            print("Export fresh cookies from Opera using Cookie-Editor,")
+            print("save as cookies\\linkedin_cookies.json, then run again.\n")
             await context.close()
             return
 
