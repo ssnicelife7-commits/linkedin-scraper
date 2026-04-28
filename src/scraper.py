@@ -105,7 +105,10 @@ async def scroll_element(page, selector, amount=400):
 async def import_cookies_if_present(context):
     """Import cookies from linkedin_cookies.json into the browser profile if the file exists."""
     if not COOKIES_PATH.exists():
+        print(f"[i] No cookies file found at cookies\\linkedin_cookies.json")
+        print(f"    Using existing browser profile session.")
         return
+    print(f"[*] Found cookies file — importing into browser profile...")
     with open(COOKIES_PATH, encoding="utf-8") as f:
         cookies = json.load(f)
     for c in cookies:
@@ -114,9 +117,7 @@ async def import_cookies_if_present(context):
     await context.add_cookies(cookies)
     imported_path = COOKIES_PATH.with_suffix(".json.imported")
     COOKIES_PATH.rename(imported_path)
-    print(f"[*] Cookies imported into browser profile.")
-    print(f"    File renamed to: {imported_path.name}")
-    print(f"    Drop a new linkedin_cookies.json here any time to refresh the session.\n")
+    print(f"[+] {len(cookies)} cookies imported. File renamed to: {imported_path.name}\n")
 
 
 # ── Reactions (likers) ────────────────────────────────────────────────────────
@@ -153,7 +154,7 @@ async def scrape_reactions(page, config):
     for sel in REACTION_BTN_SELECTORS:
         try:
             btn = await page.wait_for_selector(sel, timeout=4000)
-            if btn and await btn.is_visible():
+            if btn and await btn.is_visible():  
                 reactions_btn = btn
                 break
         except PlaywrightTimeout:
@@ -423,7 +424,10 @@ async def main():
         await page.goto("https://www.linkedin.com/feed/", wait_until="domcontentloaded")
         await human_delay(3, 5)
 
-        if "login" in page.url or "checkpoint" in page.url:
+        current_url = page.url
+        print(f"[i] Landed on: {current_url}")
+
+        if "login" in current_url or "checkpoint" in current_url or "/uas/" in current_url:
             print("\n[ERROR] Session not recognised.")
             print("Export fresh cookies from Opera using Cookie-Editor,")
             print("save as cookies\\linkedin_cookies.json, then run again.\n")
