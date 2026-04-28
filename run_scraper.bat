@@ -3,9 +3,15 @@ echo ============================================================
 echo  LinkedIn Engager Scraper
 echo ============================================================
 echo.
-echo  This will open a Chrome window and scrape up to 30 posts.
-echo  Do NOT close the Chrome window while it's running.
-echo  You CAN watch what it's doing — that's normal.
+echo  FIRST TIME ONLY:
+echo    Export all cookies from Opera using Cookie-Editor
+echo    and save as cookies\linkedin_cookies.json
+echo    See cookies\README.txt for step-by-step instructions.
+echo.
+echo  NORMAL RUNS:
+echo    Just run this script. No cookie export needed.
+echo    The browser window will open and scrape automatically.
+echo    Do NOT close the browser window while it's running.
 echo.
 
 python src\scraper.py

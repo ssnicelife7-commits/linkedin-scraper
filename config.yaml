@@ -22,3 +22,8 @@ max_load_more_clicks: 10
 
 # Browser fingerprint — leave as-is unless you change OS
 user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+
+# Residential proxy — use a static/ISP proxy so the IP is the same every run.
+# Format: http://user:pass@host:port
+# Leave blank to connect directly (fine for local testing, risky for production).
+proxy: ""

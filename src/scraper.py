@@ -1,6 +1,6 @@
 """
 LinkedIn Post Engager Scraper
-Collects likers and commenters from LinkedIn posts using a saved browser session.
+Collects likers and commenters from LinkedIn posts using a persistent browser session.
 """
 
 import asyncio
@@ -13,10 +13,12 @@ from pathlib import Path
 
 import yaml
 from playwright.async_api import async_playwright, TimeoutError as PlaywrightTimeout
+from playwright_stealth import stealth_async
 
 ROOT = Path(__file__).parent.parent
 CONFIG_PATH = ROOT / "config.yaml"
 COOKIES_PATH = ROOT / "cookies" / "linkedin_cookies.json"
+PROFILE_DIR = ROOT / "browser_profile"
 INPUT_PATH = ROOT / "input" / "post_urls.csv"
 OUTPUT_DIR = ROOT / "output"
 
@@ -26,21 +28,6 @@ OUTPUT_DIR = ROOT / "output"
 def load_config():
     with open(CONFIG_PATH) as f:
         return yaml.safe_load(f)
-
-
-VALID_SAME_SITE = {"Strict", "Lax", "None"}
-
-def load_cookies():
-    if not COOKIES_PATH.exists():
-        print(f"\n[ERROR] Cookies file not found at:\n  {COOKIES_PATH}")
-        print("\nPlease follow the steps in cookies/README.txt")
-        sys.exit(1)
-    with open(COOKIES_PATH, encoding="utf-8") as f:
-        cookies = json.load(f)
-    for cookie in cookies:
-        if cookie.get("sameSite") not in VALID_SAME_SITE:
-            cookie["sameSite"] = "None"
-    return cookies
 
 
 def load_post_urls():
@@ -113,10 +100,32 @@ async def scroll_element(page, selector, amount=400):
         pass
 
 
+# ── Session setup ─────────────────────────────────────────────────────────────
+
+async def migrate_cookies_if_needed(context):
+    """One-time: inject Opera-exported cookies into the new persistent profile."""
+    if not COOKIES_PATH.exists():
+        return
+    with open(COOKIES_PATH, encoding="utf-8") as f:
+        cookies = json.load(f)
+    for c in cookies:
+        if c.get("sameSite") not in {"Strict", "Lax", "None"}:
+            c["sameSite"] = "None"
+    await context.add_cookies(cookies)
+    imported_path = COOKIES_PATH.with_suffix(".json.imported")
+    COOKIES_PATH.rename(imported_path)
+    print(f"[*] Cookies migrated into persistent profile.")
+    print(f"    Cookie file renamed to: {imported_path.name}")
+    print(f"    You will NOT need to export cookies again.\n")
+
+
+def _profile_exists():
+    """Check whether a usable persistent profile has been created."""
+    return (PROFILE_DIR / "Default" / "Cookies").exists()
+
+
 # ── Reactions (likers) ────────────────────────────────────────────────────────
 
-# LinkedIn selector lists — ordered from most to least reliable.
-# LinkedIn redesigns its UI periodically; add new selectors at the top if one breaks.
 REACTION_BTN_SELECTORS = [
     "button:has(span.social-detail-social-counts_reactions-count)",
     "span.social-detail-social-counts_reactions-count",
@@ -145,7 +154,6 @@ HEADLINE_SELECTORS_IN_MODAL = [
 async def scrape_reactions(page, config):
     likers = []
 
-    # Find reactions button
     reactions_btn = None
     for sel in REACTION_BTN_SELECTORS:
         try:
@@ -163,7 +171,6 @@ async def scrape_reactions(page, config):
     await reactions_btn.click()
     await human_delay(2, 4)
 
-    # Wait for modal
     modal_found = False
     for sel in MODAL_CONTENT_SELECTORS:
         try:
@@ -227,12 +234,10 @@ async def scrape_reactions(page, config):
             break
         prev_count = current
 
-        # Scroll inside modal
         modal_sel = MODAL_CONTENT_SELECTORS[0]
         await scroll_element(page, modal_sel, 400)
         await human_delay(1.0, 2.5)
 
-    # Close modal
     try:
         close = await page.query_selector("button.artdeco-modal__dismiss")
         if close:
@@ -378,12 +383,9 @@ async def scrape_post(page, post_info, config):
 
 async def main():
     config = load_config()
-    cookies = load_cookies()
     all_urls = load_post_urls()
 
-    # Skip already-done URLs
     pending = [r for r in all_urls if r.get("status", "").lower() != "done"]
-
     max_posts = config.get("max_posts_per_session", 30)
     batch = pending[:max_posts]
 
@@ -399,29 +401,40 @@ async def main():
         print("Nothing to scrape — all URLs in post_urls.csv are marked done.")
         return
 
+    is_first_run = not _profile_exists()
+    proxy_url = config.get("proxy", "").strip()
+    launch_kwargs = {"proxy": {"server": proxy_url}} if proxy_url else {}
+
+    PROFILE_DIR.mkdir(exist_ok=True)
+
     done_posts = []
 
     async with async_playwright() as p:
-        browser = await p.chromium.launch(
+        context = await p.chromium.launch_persistent_context(
+            str(PROFILE_DIR),
             headless=False,
             slow_mo=50,
             args=["--start-maximized"],
-        )
-        context = await browser.new_context(
             user_agent=config.get("user_agent"),
             viewport={"width": 1280, "height": 800},
+            **launch_kwargs,
         )
-        await context.add_cookies(cookies)
+
+        if is_first_run:
+            await migrate_cookies_if_needed(context)
+
         page = await context.new_page()
+        await stealth_async(page)
 
         print("[*] Checking LinkedIn session...")
         await page.goto("https://www.linkedin.com/feed/", wait_until="domcontentloaded")
         await human_delay(3, 5)
 
         if "login" in page.url or "checkpoint" in page.url:
-            print("\n[ERROR] Session expired or invalid.")
-            print("Re-export your cookies and update cookies/linkedin_cookies.json\n")
-            await browser.close()
+            print("\n[ERROR] Session not recognised.")
+            print("Follow the steps in cookies/README.txt to export your cookies from Opera,")
+            print("then re-run this script.\n")
+            await context.close()
             return
 
         print("[+] Session active. Starting...\n")
@@ -440,11 +453,10 @@ async def main():
                 print(f"\n[~] Waiting {wait:.0f}s before next post...")
                 await asyncio.sleep(wait)
 
-        await browser.close()
+        await context.close()
 
     mark_urls_done(done_posts)
 
-    output_file = OUTPUT_DIR / f"engagers_{session_id}.csv"
     remaining = len(pending) - len(batch)
 
     print(f"\n{'='*60}")

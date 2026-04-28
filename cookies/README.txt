@@ -1,31 +1,45 @@
-HOW TO EXPORT YOUR LINKEDIN COOKIES
-====================================
+ONE-TIME SETUP — Export your LinkedIn cookies from Opera
+=========================================================
 
-Do this once on your burner LinkedIn account. Redo it if scraping
-starts failing with "session expired" errors (cookies last ~1-2 weeks).
+You only need to do this ONCE. After the first run, the scraper
+saves your session permanently and this file is no longer needed.
 
-STEP 1 — Install the extension
-  Chrome/Edge: search "Cookie-Editor" in the Chrome Web Store
-  Install the extension by "cgaglio" (the one with 500k+ users)
+STEPS
+-----
+1. Open Opera and make sure you are logged into your LinkedIn
+   scraper account (the burner account).
 
-STEP 2 — Log in to LinkedIn
-  Log in to LinkedIn on Chrome/Edge using your BURNER account.
-  Do some normal browsing for a minute (scroll feed, etc.).
+2. Install the "Cookie-Editor" extension in Opera if you don't
+   have it already:
+   https://cookie-editor.com
 
-STEP 3 — Export cookies
-  1. Click the Cookie-Editor extension icon (top-right of browser)
-  2. Make sure you're on a linkedin.com tab
-  3. Click "Export" → "Export as JSON"
-  4. This copies the cookies to your clipboard
+3. Navigate to https://www.linkedin.com in Opera.
 
-STEP 4 — Save the file
-  1. Open Notepad
-  2. Paste (Ctrl+V)
-  3. Save As → navigate to this folder (cookies/)
-  4. Filename: linkedin_cookies.json
-  5. Save as type: "All Files" (not .txt)
+4. Click the Cookie-Editor icon in your toolbar.
 
-DONE. The scraper will use this file automatically.
+5. Click "Export" → "Export as JSON".
 
-SECURITY NOTE: This file contains your session credentials.
+6. Save the file as:
+       linkedin_cookies.json
+   inside this folder (cookies/).
+
+7. Run the scraper (run_scraper.bat).
+   The scraper will import all cookies into its persistent profile
+   and rename this file to linkedin_cookies.json.imported.
+   You will see a confirmation message in the console.
+
+8. That's it — never export cookies again. The session is saved.
+
+
+WHAT IF THE SESSION EXPIRES LATER?
+-----------------------------------
+If the scraper says "Session not recognised" after weeks of use,
+just repeat steps 3-7 above. This should be rare if you use a
+residential proxy and don't log the scraper account out manually.
+
+
+SECURITY NOTE
+--------------
+linkedin_cookies.json contains your session credentials.
 Do not share it, upload it, or commit it to Git.
+(.gitignore already excludes it.)

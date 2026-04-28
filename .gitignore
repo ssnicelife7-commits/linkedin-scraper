@@ -1,4 +1,6 @@
 cookies/linkedin_cookies.json
+cookies/linkedin_cookies.json.imported
+browser_profile/
 output/
 __pycache__/
 *.pyc
