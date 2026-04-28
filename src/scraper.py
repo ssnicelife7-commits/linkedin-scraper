@@ -13,6 +13,7 @@ from pathlib import Path
 
 import yaml
 from playwright.async_api import async_playwright, TimeoutError as PlaywrightTimeout
+from playwright_stealth import Stealth
 
 ROOT = Path(__file__).parent.parent
 CONFIG_PATH = ROOT / "config.yaml"
@@ -413,6 +414,7 @@ async def main():
         )
         await context.add_cookies(cookies)
         page = await context.new_page()
+        await Stealth().apply_stealth_async(page)
 
         print("[*] Checking LinkedIn session...")
         await page.goto("https://www.linkedin.com/feed/", wait_until="domcontentloaded")
