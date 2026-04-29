@@ -338,15 +338,37 @@ async def scrape_comments(page, config):
 
 # ── Per-post orchestration ────────────────────────────────────────────────────
 
+def clean_url(url: str) -> str:
+    """Strip UTM/tracking params — they trigger redirect chains that stall Playwright."""
+    return url.split("?")[0].rstrip("/")
+
+
+async def navigate_to_post(page, url: str) -> bool:
+    """Navigate to a post page with one retry. Returns True if successful."""
+    for attempt in range(2):
+        try:
+            await page.goto(url, wait_until="domcontentloaded", timeout=45000)
+            return True
+        except PlaywrightTimeout:
+            if attempt == 0:
+                print(f"  [~] Navigation timeout, retrying...")
+                await human_delay(3, 5)
+    return False
+
+
 async def scrape_post(page, post_info, config):
-    url = post_info["post_url"]
+    raw_url = post_info["post_url"]
+    url = clean_url(raw_url)
     competitor = post_info.get("competitor", "unknown")
 
     print(f"\n[>] {url}")
     print(f"    Competitor: {competitor}")
 
     try:
-        await page.goto(url, wait_until="domcontentloaded", timeout=30000)
+        if not await navigate_to_post(page, url):
+            print(f"  [!] Could not load post page after retry — skipping")
+            return []
+
         await human_delay(3, 6)
         await page.mouse.wheel(0, random.randint(200, 500))
         await human_delay(2, 4)
