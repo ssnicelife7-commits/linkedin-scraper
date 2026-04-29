@@ -351,35 +351,21 @@ def clean_url(url: str) -> str:
     return url
 
 
-POST_LOADED_SELECTORS = [
-    ".feed-shared-update-v2",
-    ".update-components-actor",
-    ".occludable-update",
-    "div.feed-shared-inline-show-more-text",
-    "article.feed-shared-update-v2",
-]
-
-
 async def navigate_to_post(page, url: str) -> bool:
-    """Navigate to a post page with one retry. Returns True if post content appears."""
-    for attempt in range(2):
-        try:
-            # "commit" returns as soon as the server responds — works with LinkedIn's SPA
-            await page.goto(url, wait_until="commit", timeout=45000)
-            # Wait for actual post content, not a browser event
-            for sel in POST_LOADED_SELECTORS:
-                try:
-                    await page.wait_for_selector(sel, timeout=15000)
-                    return True
-                except PlaywrightTimeout:
-                    continue
-            print(f"  [!] Page loaded but post content not found (attempt {attempt + 1})")
-        except PlaywrightTimeout:
-            pass
-        if attempt == 0:
-            print(f"  [~] Retrying navigation...")
-            await human_delay(3, 5)
-    return False
+    """Navigate to a post page. Returns False only if we end up on login/checkpoint."""
+    try:
+        await page.goto(url, wait_until="commit", timeout=45000)
+        await asyncio.sleep(8)  # Give React time to render
+        screenshot_path = ROOT / "debug_post.png"
+        await page.screenshot(path=str(screenshot_path))
+        print(f"  [i] Screenshot saved → debug_post.png")
+        if "login" in page.url or "checkpoint" in page.url:
+            print(f"  [!] Redirected to login — session may have expired")
+            return False
+        return True
+    except PlaywrightTimeout:
+        print(f"  [!] Navigation timed out")
+        return False
 
 
 async def scrape_post(page, post_info, config):
