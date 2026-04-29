@@ -343,16 +343,34 @@ def clean_url(url: str) -> str:
     return url.split("?")[0].rstrip("/")
 
 
+POST_LOADED_SELECTORS = [
+    ".feed-shared-update-v2",
+    ".update-components-actor",
+    ".occludable-update",
+    "div.feed-shared-inline-show-more-text",
+    "article.feed-shared-update-v2",
+]
+
+
 async def navigate_to_post(page, url: str) -> bool:
-    """Navigate to a post page with one retry. Returns True if successful."""
+    """Navigate to a post page with one retry. Returns True if post content appears."""
     for attempt in range(2):
         try:
-            await page.goto(url, wait_until="domcontentloaded", timeout=45000)
-            return True
+            # "commit" returns as soon as the server responds — works with LinkedIn's SPA
+            await page.goto(url, wait_until="commit", timeout=45000)
+            # Wait for actual post content, not a browser event
+            for sel in POST_LOADED_SELECTORS:
+                try:
+                    await page.wait_for_selector(sel, timeout=15000)
+                    return True
+                except PlaywrightTimeout:
+                    continue
+            print(f"  [!] Page loaded but post content not found (attempt {attempt + 1})")
         except PlaywrightTimeout:
-            if attempt == 0:
-                print(f"  [~] Navigation timeout, retrying...")
-                await human_delay(3, 5)
+            pass
+        if attempt == 0:
+            print(f"  [~] Retrying navigation...")
+            await human_delay(3, 5)
     return False
 
 
