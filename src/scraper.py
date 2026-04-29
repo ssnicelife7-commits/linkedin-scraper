@@ -339,8 +339,16 @@ async def scrape_comments(page, config):
 # ── Per-post orchestration ────────────────────────────────────────────────────
 
 def clean_url(url: str) -> str:
-    """Strip UTM/tracking params — they trigger redirect chains that stall Playwright."""
-    return url.split("?")[0].rstrip("/")
+    """Convert /posts/ shareable URLs to the direct /feed/update/urn format.
+    The /posts/ format triggers a redirect chain that stalls Playwright.
+    The urn format is what LinkedIn's own app navigates to internally."""
+    import re
+    url = url.split("?")[0].rstrip("/")
+    match = re.search(r"-(\d{15,})-", url)
+    if match:
+        activity_id = match.group(1)
+        return f"https://www.linkedin.com/feed/update/urn:li:activity:{activity_id}/"
+    return url
 
 
 POST_LOADED_SELECTORS = [
