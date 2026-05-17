@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LinkedIn Headline Generator</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f3f4f6;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 4px 24px rgba(0,0,0,.08);
+      padding: 2.5rem 2rem;
+      width: 100%;
+      max-width: 480px;
+    }
+    h1 { font-size: 1.4rem; font-weight: 700; color: #111; margin-bottom: .4rem; }
+    .subtitle { font-size: .9rem; color: #6b7280; margin-bottom: 2rem; }
+    label { display: block; font-size: .85rem; font-weight: 600; color: #374151; margin-bottom: .5rem; }
+    .drop-zone {
+      border: 2px dashed #d1d5db;
+      border-radius: 8px;
+      padding: 2.5rem 1rem;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color .2s, background .2s;
+      margin-bottom: 1.5rem;
+    }
+    .drop-zone:hover, .drop-zone.drag-over {
+      border-color: #2563eb;
+      background: #eff6ff;
+    }
+    .drop-zone input[type="file"] {
+      display: none;
+    }
+    .drop-icon { font-size: 2rem; margin-bottom: .6rem; }
+    .drop-text { font-size: .9rem; color: #6b7280; }
+    .drop-text span { color: #2563eb; font-weight: 600; cursor: pointer; }
+    #file-name { font-size: .8rem; color: #059669; margin-top: .5rem; font-weight: 500; }
+    .btn {
+      display: block;
+      width: 100%;
+      padding: .85rem;
+      background: #2563eb;
+      color: #fff;
+      font-size: 1rem;
+      font-weight: 600;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background .2s;
+    }
+    .btn:hover { background: #1d4ed8; }
+    .btn:disabled { background: #93c5fd; cursor: not-allowed; }
+    .flash {
+      background: #fef2f2;
+      border: 1px solid #fca5a5;
+      color: #b91c1c;
+      padding: .75rem 1rem;
+      border-radius: 8px;
+      margin-bottom: 1.25rem;
+      font-size: .875rem;
+    }
+    .info {
+      margin-top: 1.5rem;
+      font-size: .8rem;
+      color: #9ca3af;
+      line-height: 1.6;
+    }
+    .loading { display: none; text-align: center; margin-top: 1rem; color: #6b7280; font-size: .875rem; }
+    .spinner {
+      display: inline-block;
+      width: 18px; height: 18px;
+      border: 3px solid #e5e7eb;
+      border-top-color: #2563eb;
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      vertical-align: middle;
+      margin-right: .4rem;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Headline Generator</h1>
+    <p class="subtitle">Upload a Kanbox CSV — get 6 LinkedIn headline alternatives per prospect.</p>
+
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        {% for msg in messages %}
+          <div class="flash">{{ msg }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <form method="POST" action="/process" enctype="multipart/form-data" id="upload-form">
+      <label>Kanbox export (.csv)</label>
+      <div class="drop-zone" id="drop-zone">
+        <div class="drop-icon">📂</div>
+        <div class="drop-text">Drag & drop your file here, or <span id="browse-link">browse</span></div>
+        <div id="file-name"></div>
+        <input type="file" name="csv_file" id="csv-input" accept=".csv">
+      </div>
+      <button type="submit" class="btn" id="submit-btn">Generate Headlines</button>
+    </form>
+
+    <div class="loading" id="loading">
+      <div class="spinner"></div> Processing… this may take a minute for large batches.
+    </div>
+
+    <div class="info">
+      Output columns added: <strong>profile_snapshot, alt_1–alt_6, assumptions</strong><br>
+      Rows where data was ambiguous will have notes in the <em>assumptions</em> column.
+    </div>
+  </div>
+
+  <script>
+    const dropZone = document.getElementById('drop-zone');
+    const csvInput = document.getElementById('csv-input');
+    const fileNameEl = document.getElementById('file-name');
+    const form = document.getElementById('upload-form');
+    const submitBtn = document.getElementById('submit-btn');
+    const loading = document.getElementById('loading');
+
+    document.getElementById('browse-link').addEventListener('click', () => csvInput.click());
+    dropZone.addEventListener('click', () => csvInput.click());
+
+    csvInput.addEventListener('change', () => {
+      if (csvInput.files[0]) fileNameEl.textContent = csvInput.files[0].name;
+    });
+
+    dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+    dropZone.addEventListener('drop', e => {
+      e.preventDefault();
+      dropZone.classList.remove('drag-over');
+      const dt = e.dataTransfer;
+      if (dt.files[0]) {
+        csvInput.files = dt.files;
+        fileNameEl.textContent = dt.files[0].name;
+      }
+    });
+
+    form.addEventListener('submit', () => {
+      submitBtn.disabled = true;
+      loading.style.display = 'block';
+    });
+  </script>
+</body>
+</html>
